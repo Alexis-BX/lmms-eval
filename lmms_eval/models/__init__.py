@@ -24,6 +24,7 @@ AVAILABLE_MODELS = {
     "internvl2": "InternVL2",
     "llama_vid": "LLaMAVid",
     "llava": "Llava",
+    "robin": "Robin",
     "llava_hf": "LlavaHf",
     "llava_onevision": "Llava_OneVision",
     "llava_sglang": "LlavaSglang",
