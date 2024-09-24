@@ -2,6 +2,7 @@ import torch
 import os
 import requests
 import json
+from PIL import Image
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -340,6 +341,8 @@ class Robin(lmms):
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
 
+        no_image = Image.new('RGB', (512, 512), (0, 0, 0))
+
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
@@ -348,10 +351,9 @@ class Robin(lmms):
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         for chunk in chunks:
-            contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            task = task[0]
-            split = split[0]
-            batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
+            contexts, all_gen_kwargs, doc_to_visual, doc_id, tasks, splits = zip(*chunk)
+            batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for task, split, ids in zip(tasks, splits, doc_id)]  # [B, N]
+            batched_visuals = [visual if len(visual) > 0 else [no_image.copy()] for visual in batched_visuals]
             flattened_visuals = self.flatten(batched_visuals)  # [B*N]
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
